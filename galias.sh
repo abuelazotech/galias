@@ -198,7 +198,7 @@ mostrar_diccionario() {
 modo_cli() {
     case "${1:-}" in
         --version)
-            printf 'Galias 1.0-1\n'
+            printf 'Galias 1.0-2\n'
             ;;
         --ayuda|--help)
             printf 'Uso: ./galias.sh [opción]\n\n'

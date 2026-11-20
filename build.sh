@@ -34,12 +34,12 @@ chmod 0755 "$RAIZ/paquete_galias/usr/bin/galias"
 chmod 0755 "$RAIZ/paquete_galias/DEBIAN/postinst"
 chmod 0755 "$RAIZ/paquete_galias/DEBIAN/postrm"
 
-dpkg-deb --build --root-owner-group "$RAIZ/paquete_galias" "$RAIZ/dist/galias_1.0-1_all.deb"
+dpkg-deb --build --root-owner-group "$RAIZ/paquete_galias" "$RAIZ/dist/galias_1.0-2_all.deb"
 
 if command -v lintian >/dev/null 2>&1; then
-    lintian "$RAIZ/dist/galias_1.0-1_all.deb" || true
+    lintian "$RAIZ/dist/galias_1.0-2_all.deb" || true
 fi
 
-PAQUETE="$RAIZ/dist/galias_1.0-1_all.deb"
+PAQUETE="$RAIZ/dist/galias_1.0-2_all.deb"
 printf 'Paquete: %s\n' "$PAQUETE"
 printf 'SHA256: %s\n' "$(sha256sum "$PAQUETE" | cut -d ' ' -f 1)"

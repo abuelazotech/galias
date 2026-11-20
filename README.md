@@ -21,7 +21,7 @@ Genera el paquete con el script incluido e instálalo con apt:
 
 ```bash
 ./build.sh
-sudo apt install ./dist/galias_1.0-1_all.deb
+sudo apt install ./dist/galias_1.0-2_all.deb
 ```
 
 El paquete declara `zenity` y `xdg-utils` como dependencias.

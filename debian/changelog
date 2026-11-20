@@ -1,3 +1,12 @@
+galias (1.0-2) stable; urgency=medium
+
+  * Validación de alias y campos antes de escribir en la configuración.
+  * Copias de seguridad y confirmación antes de modificar Bash o Zsh.
+  * Paquete para todas las arquitecturas con dependencias correctas.
+  * Icono SVG, AppStream, manpage y plantillas de incidencias. Closes: #1
+
+ -- Angelino Santana (El Abuelazo Tech) <santana.angelino@gmail.com>  Fri, 20 Nov 2026 00:00:00 +0000
+
 galias (1.0-1) stable; urgency=medium
 
   * Interfaz gráfica para crear y administrar alias en Bash y Zsh. Closes: #1

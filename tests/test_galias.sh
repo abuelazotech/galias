@@ -72,7 +72,7 @@ verificar_codigo 'un campo normal devuelve 0' 0 "$codigo"
 
 salida="$("$SCRIPT" --version 2>/dev/null)"
 codigo=$?
-verificar_texto 'la versión es correcta' 'Galias 1.0-1' "$salida"
+verificar_texto 'la versión es correcta' 'Galias 1.0-2' "$salida"
 verificar_codigo '--version devuelve 0' 0 "$codigo"
 
 salida="$("$SCRIPT" --ayuda 2>/dev/null)"
