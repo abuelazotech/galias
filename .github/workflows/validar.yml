@@ -1,0 +1,25 @@
+name: Validar
+
+on: [push, pull_request]
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck desktop-file-utils lintian
+      - name: Verificar sintaxis y escritorio
+        run: |
+          bash -n galias.sh
+          bash -n tests/test_galias.sh
+          shellcheck -S warning galias.sh
+          desktop-file-validate assets/galias.desktop
+      - name: Preparar permisos
+        run: chmod +x build.sh tests/test_galias.sh
+      - name: Ejecutar pruebas
+        run: ./tests/test_galias.sh
+      - name: Construir paquete
+        run: ./build.sh

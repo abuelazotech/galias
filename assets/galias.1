@@ -1,0 +1,39 @@
+.TH GALIAS 1 "2026-11-14" "1.0-1" "Utilidades"
+.SH NOMBRE
+galias \- gestor visual de alias para terminal
+.SH SINOPSIS
+.B galias
+[\fIOPCIÓN\fR]
+.SH DESCRIPCIÓN
+.B Galias
+permite crear, revisar y administrar alias de comandos para Bash y Zsh desde una interfaz gráfica. Guarda un diccionario local de tareas, comandos y alias sugeridos, y puede hacer copias de seguridad antes de modificar los archivos de configuración de la shell.
+.SH OPCIONES
+.TP
+.B \-\-ayuda
+Muestra la ayuda en español.
+.TP
+.B \-\-version
+Muestra la versión del programa.
+.TP
+.B \-\-listar
+Muestra el diccionario en columnas separadas por tabuladores.
+.TP
+.BI \-\-validar-alias " NOMBRE"
+Comprueba si un nombre de alias es válido.
+.TP
+.BI \-\-validar-campo " TEXTO"
+Comprueba si un texto es válido para el diccionario.
+.SH ARCHIVOS
+.TP
+.I ~/.config/alias_diccionario_dinamico.txt
+Diccionario local de comandos y alias.
+.TP
+.I ~/.bashrc
+Archivo de configuración usado cuando la shell activa es Bash.
+.TP
+.I ~/.zshrc
+Archivo de configuración usado cuando la shell activa es Zsh.
+.SH AUTOR
+Angelino Santana (El Abuelazo Tech)
+.SH LICENCIA
+MIT

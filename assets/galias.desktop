@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Galias
+GenericName=Gestor de alias
+Comment=Gestor visual de alias para terminal
+Exec=galias
+Icon=galias
+Terminal=false
+Type=Application
+Categories=Utility;Development;
+Keywords=alias;terminal;bash;zsh;comandos;
+StartupNotify=true

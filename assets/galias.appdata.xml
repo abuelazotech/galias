@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.elabuelazotech.galias.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Galias</name>
+  <summary>Gestor visual de alias para terminal</summary>
+  <description>
+    <p>Galias es una herramienta con interfaz gráfica para crear y administrar alias de comandos en Bash y Zsh.</p>
+    <p>Incluye un diccionario de comandos, respaldos y restauración, además de opciones de línea de comandos para listar y validar alias.</p>
+  </description>
+  <developer id="com.elabuelazotech">
+    <name>Angelino Santana (El Abuelazo Tech)</name>
+    <email>santana.angelino@gmail.com</email>
+  </developer>
+  <launchable type="desktop-id">galias.desktop</launchable>
+  <url type="homepage">https://github.com/abuelazotech/galias</url>
+  <provides>
+    <binary>galias</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+    <category>Development</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0-1" date="2026-11-14"/>
+  </releases>
+</component>

@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -D -m 0755 galias.sh debian/galias/usr/bin/galias
+	install -D -m 0644 assets/galias.desktop debian/galias/usr/share/applications/galias.desktop
+	install -D -m 0644 assets/galias.svg debian/galias/usr/share/icons/hicolor/scalable/apps/galias.svg
+	install -D -m 0644 assets/galias.appdata.xml debian/galias/usr/share/metainfo/galias.appdata.xml
+	install -D -m 0644 debian/copyright debian/galias/usr/share/doc/galias/copyright
+	install -D -m 0644 debian/galias.lintian-overrides debian/galias/usr/share/lintian/overrides/galias
+	install -D -m 0644 debian/changelog debian/galias/usr/share/doc/galias/changelog.Debian
+	install -D -m 0644 assets/galias.1 debian/galias/usr/share/man/man1/galias.1
+	gzip -n -9 debian/galias/usr/share/man/man1/galias.1
+	gzip -n -9 debian/galias/usr/share/doc/galias/changelog.Debian

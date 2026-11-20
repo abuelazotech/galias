@@ -1,0 +1,12 @@
+Package: galias
+Version: 1.0-1
+Section: utils
+Priority: optional
+Architecture: all
+Depends: zenity, xdg-utils
+Maintainer: Angelino Santana (El Abuelazo Tech) <santana.angelino@gmail.com>
+Installed-Size: 64
+Description: Gestor visual de alias para terminal
+ Herramienta con interfaz gráfica para crear y administrar alias
+ de comandos en Bash y Zsh. Incluye diccionario, respaldos,
+ restauración y opciones de línea de comandos.

@@ -1,0 +1,16 @@
+Source: galias
+Section: utils
+Priority: optional
+Maintainer: Angelino Santana (El Abuelazo Tech) <santana.angelino@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Homepage: https://github.com/abuelazotech/galias
+Rules-Requires-Root: no
+Standards-Version: 4.6.2
+
+Package: galias
+Architecture: all
+Depends: ${misc:Depends}, zenity, xdg-utils
+Description: Gestor visual de alias para terminal
+ Herramienta con interfaz gráfica para crear y administrar alias
+ de comandos en Bash y Zsh. Incluye diccionario, respaldos,
+ restauración y opciones de línea de comandos.

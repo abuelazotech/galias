@@ -1,0 +1,9 @@
+galias (1.0-1) stable; urgency=medium
+
+  * Interfaz gráfica para crear y administrar alias en Bash y Zsh. Closes: #1
+  * Diccionario ampliable con sugerencias y comandos personalizados.
+  * Respaldo y restauración del diccionario de alias.
+  * Modos de línea de comandos para listar y validar alias.
+  * Paquete preparado para escritorios con zenity y xdg-utils.
+
+ -- Angelino Santana (El Abuelazo Tech) <santana.angelino@gmail.com>  Sat, 14 Nov 2026 00:00:00 +0000

@@ -1,0 +1,15 @@
+.aider*
+*.deb
+dist/
+*.bak
+*~
+.DS_Store
+__pycache__/
+.vscode/
+paquete_galias/usr/bin/galias
+paquete_galias/usr/share/applications/galias.desktop
+paquete_galias/usr/share/icons/hicolor/scalable/apps/galias.svg
+paquete_galias/usr/share/metainfo/galias.appdata.xml
+paquete_galias/usr/share/doc/galias/*
+paquete_galias/usr/share/man/man1/galias.1.gz
+paquete_galias/usr/share/lintian/overrides/galias
