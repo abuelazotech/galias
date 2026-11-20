@@ -267,7 +267,7 @@ mostrar_intro() {
 crear_alias_gui() {
     local intencion registro clave comando descripcion sugerencias respuesta consulta
     local elegido alias_final bandera="TRUE" sugerencia s1 s2 s3
-    local -a coincidencias=() opciones=() alias_items=() sugerencias_array=()
+    local -a coincidencias=() opciones=() alias_items=()
 
     intencion="$(zenity --entry --title="Paso 1: ¿qué necesitas?" \
         --text="Escribe la acción en español sencillo (por ejemplo: actualizar sistema):" \
