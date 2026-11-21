@@ -10,16 +10,19 @@ jobs:
       - name: Instalar dependencias
         run: |
           sudo apt-get update
-          sudo apt-get install -y shellcheck desktop-file-utils lintian
-      - name: Verificar sintaxis y escritorio
+          sudo apt-get install -y shellcheck desktop-file-utils lintian appstream
+      - name: Verificar sintaxis y metadatos
         run: |
           bash -n galias.sh
           bash -n tests/test_galias.sh
-          shellcheck -S warning galias.sh
+          shellcheck -S warning -x galias.sh build.sh tests/test_galias.sh
           desktop-file-validate assets/galias.desktop
+          appstreamcli validate --no-net assets/galias.appdata.xml
       - name: Preparar permisos
         run: chmod +x build.sh tests/test_galias.sh
       - name: Ejecutar pruebas
         run: ./tests/test_galias.sh
       - name: Construir paquete
         run: ./build.sh
+      - name: Verificar paquete con lintian
+        run: lintian --fail-on warning --pedantic "dist/galias_$(dpkg-parsechangelog -SVersion)_all.deb"

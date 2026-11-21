@@ -34,6 +34,31 @@ validar_campo() {
     return 0
 }
 
+normalizar_clave() {
+    local valor="${1:-}"
+    valor="$(printf '%s' "$valor" | tr '[:upper:]' '[:lower:]')"
+    valor="$(printf '%s' "$valor" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')"
+    printf '%s' "$valor"
+}
+
+validar_sugerencias() {
+    local sugerencias="${1:-}"
+    local sugerencia
+    local -a lista=()
+    [[ -z "$sugerencias" ]] && return 0
+    IFS=',' read -r -a lista <<< "$sugerencias"
+    for sugerencia in "${lista[@]}"; do
+        sugerencia="$(printf '%s' "$sugerencia" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+        [[ -z "$sugerencia" ]] && continue
+        validar_alias "$sugerencia" || return 1
+    done
+    return 0
+}
+
+codificar_url() {
+    python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "${1:-}"
+}
+
 inicializar_entorno() {
     mkdir -p "$CONFIG_DIR" || return 1
     if [[ ! -f "$DICCIONARIO_FILE" ]]; then
@@ -87,51 +112,81 @@ buscar_coincidencias() {
 
 hacer_backup() {
     local archivo="${1:-}"
+    local destino=""
     [[ -f "$archivo" ]] || return 0
     local sello="${2:-$(date +%Y%m%d_%H%M%S)}"
-    cp -- "$archivo" "${archivo}.bak_${sello}"
+    destino="${archivo}.bak_${sello}"
+    cp -- "$archivo" "$destino" || return 1
+    printf '%s\n' "$destino"
 }
 
 guardar_alias() {
     local nombre="${1:-}" comando="${2:-}" descripcion="${3:-}"
+    local vista_previa backup="" respuesta accion="añadir"
     validar_alias "$nombre" || return 1
     validar_campo "$comando" 1 || return 1
     validar_campo "$descripcion" 0 || return 1
 
-    local vista_previa
+    if [[ -f "$RC_FILE" ]] && grep -Eq "^[[:space:]]*alias[[:space:]]+${nombre}=" "$RC_FILE"; then
+        respuesta="$(zenity --list --radiolist --title="El alias ya existe" \
+            --text="El alias '$nombre' ya existe en $RC_FILE. ¿Qué quieres hacer?" \
+            --column="Elegir" --column="Acción" \
+            TRUE "Reemplazar el alias anterior" \
+            FALSE "Cancelar" \
+            --width=560 --height=220)" || return 0
+        [[ "$respuesta" == "Reemplazar el alias anterior" ]] || return 0
+        accion="reemplazar"
+    fi
+
     printf -v vista_previa '\n# Alias: %s\nalias %s=%q' "$descripcion" "$nombre" "$comando"
 
     if ! zenity --question --title="Confirmar el nuevo alias" \
-        --text="Se añadirán estas tres líneas a $RC_FILE:\n\n$vista_previa\n\n¿Quieres continuar?" \
+        --text="Se va a ${accion} este alias en $RC_FILE:\n\n$vista_previa\n\n¿Quieres continuar?" \
         --ok-label="Sí, guardarlo" --cancel-label="Cancelar" --width=580; then
         return 0
     fi
 
-    hacer_backup "$RC_FILE"
+    backup="$(hacer_backup "$RC_FILE")"
 
-    printf '\n' >> "$RC_FILE"
-    printf '# Alias: %s' "$descripcion" >> "$RC_FILE"
-    printf '\nalias %s=%q\n' "$nombre" "$comando" >> "$RC_FILE"
+    if [[ "$accion" == "reemplazar" && -f "$RC_FILE" ]]; then
+        awk -v nombre="$nombre" '
+            /^[[:space:]]*#/ { comentario=$0; next }
+            $0 ~ "^[[:space:]]*alias[[:space:]]+" nombre "=" { comentario=""; next }
+            { if (comentario != "") { print comentario; comentario="" } print }
+            END { if (comentario != "") print comentario }
+        ' "$RC_FILE" > "${RC_FILE}.tmp_galias" && mv -- "${RC_FILE}.tmp_galias" "$RC_FILE"
+    fi
 
-    zenity --info --title="Alias guardado" \
-        --text="Listo. Abre una terminal nueva y escribe $nombre." --width=440
+    {
+        printf '\n'
+        printf '# Alias: %s\n' "$descripcion"
+        printf 'alias %s=%q\n' "$nombre" "$comando"
+    } >> "$RC_FILE"
+
+    if [[ -n "$backup" ]]; then
+        zenity --info --title="Alias guardado" \
+            --text="Listo. Se creó respaldo en:\n$backup\n\nAbre una terminal nueva o ejecuta:\nsource \"$RC_FILE\"\n\nLuego escribe $nombre." --width=560
+    else
+        zenity --info --title="Alias guardado" \
+            --text="Listo. Abre una terminal nueva o ejecuta:\nsource \"$RC_FILE\"\n\nLuego escribe $nombre." --width=500
+    fi
 }
 
 agregar_comando() {
     local clave="${1:-}" comando="${2:-}" descripcion="${3:-}" sugerencias="${4:-}" origen="${5:-local}"
-    local sugerencia
-    local -a lista=()
+    local clave_existente _comando_existente _descripcion_existente _sugerencias_existentes clave_norm
     validar_campo "$clave" 1 || return 1
     validar_campo "$comando" 1 || return 1
     validar_campo "$descripcion" 0 || return 1
     validar_campo "$sugerencias" 0 || return 1
-    if [[ -n "$sugerencias" ]]; then
-        IFS=',' read -r -a lista <<< "$sugerencias"
-        for sugerencia in "${lista[@]}"; do
-            [[ -z "$sugerencia" ]] && continue
-            validar_alias "$sugerencia" || return 1
-        done
-    fi
+    validar_sugerencias "$sugerencias" || return 1
+    clave_norm="$(normalizar_clave "$clave")"
+    while IFS='|' read -r clave_existente _comando_existente _descripcion_existente _sugerencias_existentes || [[ -n "$clave_existente" ]]; do
+        [[ -z "$clave_existente" ]] && continue
+        if [[ "$(normalizar_clave "$clave_existente")" == "$clave_norm" ]]; then
+            return 2
+        fi
+    done < "$DICCIONARIO_FILE"
     if [[ "$origen" == "web" ]]; then
         descripcion="Sin verificar: $descripcion"
     fi
@@ -147,7 +202,8 @@ hacer_respaldo() {
 restaurar_respaldo() {
     local origen="${1:-}"
     [[ -f "$origen" ]] || return 1
-    local linea clave comando descripcion sugerencias barras total=0 motivo=""
+    local linea clave comando descripcion sugerencias barras total=0 motivo="" clave_norm
+    local -A claves_vistas=()
     while IFS= read -r linea || [[ -n "$linea" ]]; do
         [[ -z "$linea" ]] && continue
         barras="${linea//[^|]/}"
@@ -156,15 +212,25 @@ restaurar_respaldo() {
             break
         fi
         IFS='|' read -r clave comando descripcion sugerencias <<< "$linea"
-        if [[ -z "$clave" || -z "$comando" ]]; then
-            motivo="La tarea y el comando no pueden estar vacíos."
+        if ! validar_campo "$clave" 1 || ! validar_campo "$comando" 1 || ! validar_campo "$descripcion" 0 || ! validar_campo "$sugerencias" 0; then
+            motivo="El archivo contiene campos vacíos o con caracteres no permitidos."
             break
         fi
+        if ! validar_sugerencias "$sugerencias"; then
+            motivo="El archivo contiene alias sugeridos no válidos."
+            break
+        fi
+        clave_norm="$(normalizar_clave "$clave")"
+        if [[ -n "${claves_vistas[$clave_norm]:-}" ]]; then
+            motivo="El archivo contiene tareas duplicadas: $clave."
+            break
+        fi
+        claves_vistas["$clave_norm"]=1
         total=$((total + 1))
     done < "$origen"
     if [[ -n "$motivo" || "$total" -eq 0 ]]; then
         [[ -n "$motivo" ]] || motivo="El archivo de respaldo está vacío."
-        zenity --error --title="No se puede restaurar" --text="$motivo" --width=440
+        zenity --error --title="No se puede restaurar" --text="$motivo" --width=460
         return 1
     fi
     if ! zenity --question --title="Confirmar la restauración" \
@@ -172,7 +238,7 @@ restaurar_respaldo() {
         --ok-label="Sí, restaurar" --cancel-label="Cancelar" --width=540; then
         return 0
     fi
-    hacer_backup "$DICCIONARIO_FILE"
+    hacer_backup "$DICCIONARIO_FILE" >/dev/null || true
     cp -- "$origen" "$DICCIONARIO_FILE"
     zenity --info --title="Diccionario restaurado" \
         --text="Listo. Tu diccionario volvió a tener $total entradas." --width=420
@@ -204,11 +270,12 @@ modo_cli() {
             printf 'Uso: ./galias.sh [opción]\n\n'
             printf 'Sin opciones abre la ventana del asistente.\n\n'
             printf 'Opciones disponibles:\n'
-            printf '  --version              Muestra la versión del programa.\n'
-            printf '  --ayuda, --help        Muestra esta ayuda.\n'
-            printf '  --validar-alias NOMBRE Comprueba si un alias es válido.\n'
-            printf '  --validar-campo TEXTO  Comprueba si un texto sirve para el diccionario.\n'
-            printf '  --listar               Muestra el diccionario separado por tabuladores.\n'
+            printf '  --version                 Muestra la versión del programa.\n'
+            printf '  --ayuda, --help           Muestra esta ayuda.\n'
+            printf '  --validar-alias NOMBRE    Comprueba si un alias es válido.\n'
+            printf '  --validar-campo TEXTO     Comprueba si un texto sirve para el diccionario.\n'
+            printf '  --validar-sugerencias TEXTO Comprueba alias sugeridos separados por comas.\n'
+            printf '  --listar                  Muestra el diccionario separado por tabuladores.\n'
             ;;
         --validar-alias)
             if (( $# >= 2 )) && validar_alias "${2:-}"; then
@@ -220,6 +287,14 @@ modo_cli() {
             ;;
         --validar-campo)
             if (( $# >= 2 )) && validar_campo "${2:-}" 1; then
+                printf 'valido\n'
+                return 0
+            fi
+            printf 'invalido\n'
+            return 1
+            ;;
+        --validar-sugerencias)
+            if (( $# >= 2 )) && validar_sugerencias "${2:-}"; then
                 printf 'valido\n'
                 return 0
             fi
@@ -287,13 +362,18 @@ crear_alias_gui() {
             --text="No tengo guardada la tarea \"$intencion\". ¿Qué hacemos?" \
             --column="Opción" --column="Descripción" --width=560 --height=220 \
             "1" "Buscar el comando en Google" \
-            "2" "Volver al menú")" || return 0
-        [[ "$respuesta" == 1* ]] || return 0
+            "2" "Añadirlo manualmente" \
+            "3" "Volver al menú")" || return 0
+        [[ "$respuesta" == 3* ]] && return 0
+        if [[ "$respuesta" == 2* ]]; then
+            flujo_agregar_comando
+            return 0
+        fi
 
         zenity --info --title="Buscando en la web" \
             --text="Abriré el navegador. Copia el comando que encuentres y pégalo en el siguiente paso." \
             --width=460
-        consulta="${intencion// /+}"
+        consulta="$(codificar_url "$intencion")"
         xdg-open "https://www.google.com/search?q=comando+para+${consulta}+en+linux+mint" >/dev/null 2>&1 &
 
         comando="$(zenity --entry --title="Pega el comando" \
@@ -301,16 +381,25 @@ crear_alias_gui() {
         [[ -z "$comando" ]] && return 0
         descripcion="$intencion"
         sugerencias="mialias1,mialias2,mialias3"
-        if ! agregar_comando "$intencion" "$comando" "$descripcion" "$sugerencias" "web"; then
-            zenity --error --title="No pude guardarlo" \
-                --text="Revisa el texto: no puede contener '|' ni saltos de línea." \
-                --width=440
-            return 0
+        if agregar_comando "$intencion" "$comando" "$descripcion" "$sugerencias" "web"; then
+            zenity --info --title="Comando aprendido" \
+                --text="Ya guardé este comando en el diccionario. Su descripción aún no está verificada." \
+                --width=460
+            registro="$intencion|$comando|Sin verificar: $descripcion|$sugerencias"
+        else
+            local rc_agregar=$?
+            if [[ $rc_agregar -eq 2 ]]; then
+                zenity --info --title="Ya existía" --text="Esa tarea ya estaba en el diccionario. Usaré la entrada existente." --width=440
+                mapfile -t coincidencias < <(buscar_coincidencias "$intencion")
+                (( ${#coincidencias[@]} > 0 )) || return 0
+                registro="${coincidencias[0]}"
+            else
+                zenity --error --title="No pude guardarlo" \
+                    --text="Revisa el texto: no puede contener '|' ni saltos de línea, y los alias sugeridos deben ser válidos." \
+                    --width=460
+                return 0
+            fi
         fi
-        zenity --info --title="Comando aprendido" \
-            --text="Ya guardé este comando en el diccionario. Su descripción aún no está verificada." \
-            --width=460
-        registro="$intencion|$comando|Sin verificar: $descripcion|$sugerencias"
     elif (( ${#coincidencias[@]} == 1 )); then
         registro="${coincidencias[0]}"
     else
@@ -375,9 +464,14 @@ flujo_agregar_comando() {
     [[ -n "$formulario" ]] || return 0
     IFS='|' read -r clave comando descripcion sugerencias <<< "$formulario"
     if ! agregar_comando "$clave" "$comando" "$descripcion" "$sugerencias" "local"; then
-        zenity --error --title="Datos no válidos" \
-            --text="Revisa los campos: no pueden contener '|' ni saltos de línea, y los alias sugeridos deben ser válidos." \
-            --width=500
+        local rc_agregar=$?
+        if [[ $rc_agregar -eq 2 ]]; then
+            zenity --error --title="Tarea duplicada" --text="Ya existe una tarea con ese nombre en el diccionario." --width=440
+        else
+            zenity --error --title="Datos no válidos" \
+                --text="Revisa los campos: no pueden contener '|' ni saltos de línea, y los alias sugeridos deben ser válidos." \
+                --width=500
+        fi
         return 0
     fi
     zenity --info --title="Comando añadido" --text="Listo. Ya tengo guardado \"$clave\"." --width=420
@@ -430,19 +524,21 @@ flujo_principal() {
     done
 }
 
-if (( $# > 0 )); then
-    if [[ "$1" == "--listar" ]]; then
-        inicializar_entorno || exit 1
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    if (( $# > 0 )); then
+        if [[ "$1" == "--listar" ]]; then
+            inicializar_entorno || exit 1
+        fi
+        modo_cli "$@"
+        exit $?
     fi
-    modo_cli "$@"
-    exit $?
+
+    inicializar_entorno || {
+        printf 'No pude preparar la carpeta de configuración de Galias.\n' >&2
+        exit 1
+    }
+
+    verificar_dependencias || exit 1
+    mostrar_intro
+    flujo_principal
 fi
-
-inicializar_entorno || {
-    printf 'No pude preparar la carpeta de configuración de Galias.\n' >&2
-    exit 1
-}
-
-verificar_dependencias || exit 1
-mostrar_intro
-flujo_principal

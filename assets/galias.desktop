@@ -6,6 +6,6 @@ Exec=galias
 Icon=galias
 Terminal=false
 Type=Application
-Categories=Utility;Development;
+Categories=Utility;
 Keywords=alias;terminal;bash;zsh;comandos;
 StartupNotify=true

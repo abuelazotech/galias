@@ -70,6 +70,16 @@ codigo=$?
 verificar_texto 'un campo normal se acepta' 'valido' "$salida"
 verificar_codigo 'un campo normal devuelve 0' 0 "$codigo"
 
+salida="$("$SCRIPT" --validar-sugerencias 'a1,b2,c_3' 2>/dev/null)"
+codigo=$?
+verificar_texto 'sugerencias válidas se aceptan' 'valido' "$salida"
+verificar_codigo 'sugerencias válidas devuelven 0' 0 "$codigo"
+
+salida="$("$SCRIPT" --validar-sugerencias 'buena,mal alias' 2>/dev/null)"
+codigo=$?
+verificar_texto 'sugerencias inválidas se rechazan' 'invalido' "$salida"
+verificar_codigo 'sugerencias inválidas devuelven 1' 1 "$codigo"
+
 salida="$("$SCRIPT" --version 2>/dev/null)"
 codigo=$?
 verificar_texto 'la versión es correcta' 'Galias 1.0-3' "$salida"
@@ -102,6 +112,70 @@ if [[ -f "$GALIAS_HOME/.config/alias_diccionario_dinamico.txt" ]]; then
     printf 'Correcto: el diccionario se creó en GALIAS_HOME\n'
 else
     printf 'Falló: no se creó el diccionario en GALIAS_HOME\n'
+    fallos=$((fallos + 1))
+fi
+
+# Pruebas de funciones internas
+# shellcheck source=/dev/null
+source "$SCRIPT"
+
+# shellcheck disable=SC2317
+zenity() { return 0; }
+export -f zenity
+
+export GALIAS_HOME="$TEMP_DIR/interno"
+inicializar_entorno
+
+if agregar_comando "Actualizar Flatpak" "flatpak update -y" "Actualiza flatpaks" "fup,flatup" "local"; then
+    printf 'Correcto: agregar_comando acepta comando nuevo\n'
+else
+    printf 'Falló: agregar_comando no aceptó comando nuevo\n'
+    fallos=$((fallos + 1))
+fi
+
+if agregar_comando "actualizar flatpak" "flatpak update -y" "Duplicado" "fup" "local"; then
+    printf 'Falló: agregar_comando permitió duplicado\n'
+    fallos=$((fallos + 1))
+else
+    rc=$?
+    verificar_codigo 'agregar_comando rechaza duplicado' 2 "$rc"
+fi
+
+export GALIAS_RC="$TEMP_DIR/bashrc_test"
+printf '# test rc\n' > "$GALIAS_RC"
+hacer_backup "$GALIAS_RC" >/dev/null
+backups=( "$GALIAS_RC".bak_* )
+if [[ -f "${backups[0]}" ]]; then
+    printf 'Correcto: hacer_backup crea copia\n'
+else
+    printf 'Falló: hacer_backup no creó copia\n'
+    fallos=$((fallos + 1))
+fi
+
+salida="$(codificar_url 'actualizar sistema & limpiar')"
+if [[ "$salida" == *'%26'* && "$salida" != *' '* ]]; then
+    printf 'Correcto: codificar_url codifica caracteres especiales\n'
+else
+    printf 'Falló: codificar_url no codificó como se esperaba (%s)\n' "$salida"
+    fallos=$((fallos + 1))
+fi
+
+invalido="$TEMP_DIR/invalido.txt"
+printf 'mala|linea\n' > "$invalido"
+if restaurar_respaldo "$invalido" >/dev/null 2>&1; then
+    printf 'Falló: restaurar_respaldo aceptó archivo inválido\n'
+    fallos=$((fallos + 1))
+else
+    printf 'Correcto: restaurar_respaldo rechaza archivo inválido\n'
+fi
+
+valido="$TEMP_DIR/valido.txt"
+printf 'tarea|echo ok|desc|a1,a2\n' > "$valido"
+if restaurar_respaldo "$valido" >/dev/null 2>&1; then
+    total="$(wc -l < "$DICCIONARIO_FILE")"
+    verificar_texto 'restaurar_respaldo restaura archivo válido' '1' "$total"
+else
+    printf 'Falló: restaurar_respaldo no restauró archivo válido\n'
     fallos=$((fallos + 1))
 fi
 
